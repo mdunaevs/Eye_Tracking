@@ -21,6 +21,7 @@ the program has troubles trying to find the eye.
 
 import cv2
 import numpy
+import paho.mqtt.client as mqtt
 
 # Classifiers used for detecting face and eyes 
 faceMask = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -139,11 +140,14 @@ def extractPupilBlob(pupilFrame, eyeh, eyew):
         else:
             cx,cy = 0, 0
         cv2.circle(pupilInit,(cx,cy),5,255,-1)
-    return pupilInit
+    return (pupilInit, cx, cy)
 
 
 def nothing(x):
     pass
+
+def getDistance(x1, y1, x2, y2):
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1/2)
 
 # Executes pupil tracking code
 def main():
@@ -171,7 +175,11 @@ def main():
                     pupilFrame = cv2.equalizeHist(pupilFrame)
 
                     # get the pupil blob image 
-                    eye = extractPupilBlob(pupilFrame, eyew, eyeh)
+                    eye, pupilx, pupily = extractPupilBlob(pupilFrame, eyew, eyeh)
+                    eyex, eyey = eyew // 2, eyeh // 2
+
+                    distance = round(getDistance(eyex, eyey, pupilx, pupily), 2)
+                    print(distance)
 
                     cv2.imshow('eye', eye)
         cv2.imshow('image', frame)
