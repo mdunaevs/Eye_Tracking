@@ -22,6 +22,20 @@ the program has troubles trying to find the eye.
 import cv2
 import numpy
 import paho.mqtt.client as mqtt
+import time
+
+# documentation: https://mqtt.ideate.cmu.edu/
+hostname = "mqtt.ideate.cmu.edu"
+portnum = 8884
+
+# MQTT server thread callbacks
+def on_connect(client, userdata, flags, rc):
+    print("Connected to server with with flags: %s, result code: %s" % (flags, rc))
+    client.subscribe("#")
+
+def on_message(client, userdata, msg):
+    print("{%s} %s" % (msg.topic, msg.payload))
+
 
 # Classifiers used for detecting face and eyes 
 faceMask = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -149,8 +163,30 @@ def nothing(x):
 def getDistance(x1, y1, x2, y2):
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1/2)
 
+
 # Executes pupil tracking code
 def main():
+    # Create a default MQTT object to connect to the remote broker server.
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    # Set up TLS
+    client.tls_set()
+    client.username_pw_set("students", "cks")
+
+    # Connect to a remote broker. Some other default args: port=1883, keepalive=60
+    client.connect_async(host=hostname, port=portnum)
+
+    # Start a background thread to process network traffic.
+    client.loop_start()
+
+    # Idle until the server completes the connection
+    while not client.is_connected():
+        print (".")
+        time.sleep(0.1)
+
+
     cap = cv2.VideoCapture(0)
     cv2.namedWindow('image')
     while True:
@@ -179,7 +215,8 @@ def main():
                     eyex, eyey = eyew // 2, eyeh // 2
 
                     distance = round(getDistance(eyex, eyey, pupilx, pupily), 2)
-                    print(distance)
+                    #print(distance)
+                    client.publish(topic="mytesttopic", payload="ping%f" % distance)
 
                     cv2.imshow('eye', eye)
         cv2.imshow('image', frame)
@@ -187,6 +224,12 @@ def main():
             break
     cap.release()
     cv2.destroyAllWindows()
+    # Disconnect cleanly from the broker server.
+    client.loop_stop()
+    client.disconnect()
+
+
+
 
 if __name__ == "__main__":
     main()
