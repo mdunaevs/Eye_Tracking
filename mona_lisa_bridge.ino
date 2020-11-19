@@ -2,9 +2,15 @@
 
 
 Servo leftX;
+Servo leftY;
+Servo rightX;
+Servo rightY;
 //================================================================
 // Hardware definitions. You will need to customize this for your specific hardware.
-const int SERVO_PIN = 9;
+const int LEFTX_SERVO_PIN = 9;
+const int LEFTY_SERVO_PIN = 8;
+const int RIGHTX_SERVO_PIN = 7;
+const int RIGHTY_SERVO_PIN = 6;
 
 //================================================================
 
@@ -30,14 +36,13 @@ const long BAUD_RATE = 115200;
 // This function is called once after reset to initialize the program.
 void setup()
 {
-  leftX.attach(SERVO_PIN);
+  leftX.attach(LEFTX_SERVO_PIN);
+  leftY.attach(LEFTY_SERVO_PIN);
+  rightX.attach(RIGHTX_SERVO_PIN);
+  rightY.attach(RIGHTY_SERVO_PIN);
   
   // Initialize the Serial port for host communication.
   Serial.begin(BAUD_RATE);
-
-  // Initialize the digital input/output pins.  You will need to customize this
-  // for your specific hardware.
-  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 //================================================================
@@ -97,6 +102,7 @@ void moveLeftEye(int xAngle, int yAngle){
 
   // make servo move
   linearMove(leftX, startAngleLeftX, endAngleLeftX, 400);
+  //linearMove(leftY, startAngleLeftY, endAngleLeftY, 400);
 }
 
 void moveRightEye(int xAngle, int yAngle){
@@ -110,13 +116,21 @@ void moveRightEye(int xAngle, int yAngle){
   endAngleRightY = yAngle;
 
   // make servo move
-  //linearMove(startAngleRightX, endAngleRightX, 400);
+  //linearMove(rightX, startAngleRightX, endAngleRightX, 400);
+  //linearMove(rightY, startAngleRightY, endAngleRightY, 400);
 }
 
-// Slightly modified linearMove from the course notes 
+
 void linearMove(Servo svo, int start, int end, int duration){
-   for(int angle = start; angle < end; angle += 1){
-       svo.write(angle);                 //command to rotate the servo to the specified angle
-       delay(15);                                
+   if(start < end){
+       for(int angle = start; angle < end; angle += 1){
+           svo.write(angle);
+           delay(15);                                
+       }
+   } else {
+      for(int angle = start; angle > end; angle -= 1){
+           svo.write(angle);
+           delay(15);                                
+       }
    }
 }
