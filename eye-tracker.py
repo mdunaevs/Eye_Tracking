@@ -98,7 +98,7 @@ def extractPupilBlob(pupilFrame, eyeh, eyew):
     pupilFrame = cv2.morphologyEx(pupilFrame, cv2.MORPH_OPEN, windowOpen)
     
     threshold = cv2.inRange(pupilFrame,250,255)		#get the blobs
-    _, contours, _ = cv2.findContours(threshold,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(threshold,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
     
     # if there are 3 or more blobs, delete the biggest and delete the left most for the right eye
     # #if there are 2 blob, take the second largest
@@ -163,6 +163,12 @@ def nothing(x):
 def getDistance(x1, y1, x2, y2):
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1/2)
 
+def distanceToXAngle(distance):
+    return 90 + int(distance * 4.5) 
+
+def distanceToYAngle(distance):
+    return 90 + int(distance * 4.5)
+
 
 # Executes pupil tracking code
 def main():
@@ -189,6 +195,8 @@ def main():
 
     cap = cv2.VideoCapture(0)
     cv2.namedWindow('image')
+    publishCountLeft = 0
+    publishCountRight = 0
     while True:
         _, frame = cap.read()
         face = detect_largest_face(frame) # gets face
@@ -196,7 +204,9 @@ def main():
             faceh, facew = face.shape[:2]
             cv2.rectangle(face,(0, 0),(facew, faceh),(255,255,0),2)
             eyes = detect_eyes(face) # gets eyes
+            eyeIntRepresentation = -1
             for eye in eyes:
+                eyeIntRepresentation += 1
                 if eye is not None:
                     eye = cut_eyebrows(eye) # removes eyebrows from eye
                     eyeh, eyew = eye.shape[:2]
@@ -214,9 +224,23 @@ def main():
                     eye, pupilx, pupily = extractPupilBlob(pupilFrame, eyew, eyeh)
                     eyex, eyey = eyew // 2, eyeh // 2
 
-                    distance = round(getDistance(eyex, eyey, pupilx, pupily), 2)
+                    xDistance = pupilx - eyex
+                    yDistance = pupily - eyey
+                    xAngle = distanceToXAngle(xDistance)
+                    yAngle = distanceToYAngle(yDistance)
+                    #distance = round(getDistance(eyex, eyey, pupilx, pupily), 2)
                     #print(distance)
-                    client.publish(topic="mytesttopic", payload="ping%f" % distance)
+                    if(eyeIntRepresentation == 0):
+                        publishCountLeft += 1
+                    else:
+                        publishCountRight += 1
+                    
+                    if(publishCountLeft == 10):
+                        client.publish(topic="monalisa", payload="(%d, %d, %d)" % (eyeIntRepresentation, xAngle, yAngle))
+                        publishCountLeft = 0
+                    if(publishCountRight == 10):
+                        client.publish(topic="monalisa", payload="(%d, %d, %d)" % (eyeIntRepresentation, xAngle, yAngle))
+                        publishCountRight = 0
 
                     cv2.imshow('eye', eye)
         cv2.imshow('image', frame)
