@@ -205,6 +205,10 @@ def main():
             cv2.rectangle(face,(0, 0),(facew, faceh),(255,255,0),2)
             eyes = detect_eyes(face) # gets eyes
             eyeIntRepresentation = -1
+            leftXSaccade = None
+            leftYSaccade = None
+            rightXSaccade = None
+            rightYSaccade = None
             for eye in eyes:
                 eyeIntRepresentation += 1
                 if eye is not None:
@@ -232,8 +236,12 @@ def main():
                     #print(distance)
                     if(eyeIntRepresentation == 0):
                         publishCountLeft += 1
+                        leftXSaccade = xAngle
+                        leftYSaccade = yAngle
                     else:
                         publishCountRight += 1
+                        rightXSaccade = xAngle
+                        rightYSaccade = yAngle
                     
                     if(publishCountLeft == 10):
                         client.publish(topic="monalisa", payload="(%d, %d, %d)" % (eyeIntRepresentation, xAngle, yAngle))
@@ -243,6 +251,12 @@ def main():
                         publishCountRight = 0
 
                     cv2.imshow('eye', eye)
+            if(leftXSaccade != None and leftYSaccade != None and rightXSaccade != None and rightYSaccade != None):
+                if(abs(leftXSaccade - rightXSaccade) <= 5 and abs(leftYSaccade - rightYSaccade) <= 5):
+                    #rint("Saccade motion")
+                    client.publish(topic="monalisa", payload="(%d, %d, %d)" % (0, leftXSaccade, leftYSaccade))
+                    client.publish(topic="monalisa", payload="(%d, %d, %d)" % (1, rightXSaccade, rightYSaccade))
+
         cv2.imshow('image', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
